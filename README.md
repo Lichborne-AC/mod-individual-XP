@@ -1,4 +1,4 @@
-# mod-indivisual-XP
+# mod-individual-XP
 
 #This Module is for Azerothcore -
 
@@ -32,6 +32,3 @@ Edit `Individual-XP.conf` in your `etc/modules/` directory (copy from the provid
 | `MaxXPRate` | `10` | Highest rate a player may pass to `.xp set`. |
 | `DefaultXPRate` | `1` | Rate assigned to a new character on first login, and the rate `.xp default` restores. |
 
-# Show your a appreciation:
-
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SBJFTAJKUNEXC)
