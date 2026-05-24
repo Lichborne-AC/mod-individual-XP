@@ -2,9 +2,12 @@
 #include "Configuration/Config.h"
 #include "ObjectMgr.h"
 #include "Chat.h"
+#include "ChatCommand.h"
 #include "Player.h"
 #include "Object.h"
 #include "DataMap.h"
+
+using namespace Acore::ChatCommands;
 
 /*
 Coded by Talamortis - For Azerothcore
@@ -27,9 +30,9 @@ class Individual_XP : public PlayerScript
 public:
     Individual_XP() : PlayerScript("Individual_XP") { }
 
-    void OnLogin(Player* p) override
+    void OnPlayerLogin(Player* p) override
     {
-        QueryResult result = CharacterDatabase.PQuery("SELECT `XPRate` FROM `individualxp` WHERE `CharacterGUID` = %u", p->GetGUIDLow());
+        QueryResult result = CharacterDatabase.Query("SELECT `XPRate` FROM `individualxp` WHERE `CharacterGUID` = {}", p->GetGUID().GetCounter());
         if (!result)
         {
             p->CustomData.GetDefault<PlayerXpRate>("Individual_XP")->XPRate = DefaultRate;
@@ -37,21 +40,21 @@ public:
         else
         {
             Field* fields = result->Fetch();
-            p->CustomData.Set("Individual_XP", new PlayerXpRate(fields[0].GetUInt32()));
+            p->CustomData.Set("Individual_XP", new PlayerXpRate(fields[0].Get<uint32>()));
         }
             ChatHandler(p->GetSession()).SendSysMessage("This server is running the |cff4CFF00Individual XP |rmodule. Use .XP to see all the commands.");
     }
 
-    void OnLogout(Player* p) override
+    void OnPlayerLogout(Player* p) override
     {
         if (PlayerXpRate* data = p->CustomData.Get<PlayerXpRate>("Individual_XP"))
         {
             uint32 rate = data->XPRate;
-            CharacterDatabase.DirectPExecute("REPLACE INTO `individualxp` (`CharacterGUID`, `XPRate`) VALUES (%u, %u);", p->GetGUIDLow(), rate);
+            CharacterDatabase.DirectExecute("REPLACE INTO `individualxp` (`CharacterGUID`, `XPRate`) VALUES ({}, {});", p->GetGUID().GetCounter(), rate);
         }
     }
 
-    void OnGiveXP(Player* p, uint32& amount, Unit* victim) override
+    void OnPlayerGiveXP(Player* p, uint32& amount, Unit* /*victim*/, uint8 /*xpSource*/) override
     {
         if (PlayerXpRate* data = p->CustomData.Get<PlayerXpRate>("Individual_XP"))
             amount *= data->XPRate;
@@ -63,28 +66,22 @@ class Individual_XP_command : public CommandScript
 public:
     Individual_XP_command() : CommandScript("Individual_XP_command") { }
 
-    std::vector<ChatCommand> GetCommands() const override
+    ChatCommandTable GetCommands() const override
     {
-      
-        static std::vector<ChatCommand> IndividualXPCommandTable =
+        static ChatCommandTable IndividualXPCommandTable =
         {
-            // View Command
-            { "View", SEC_PLAYER, false, &HandleViewCommand, "" },
-            // Set Command
-            { "Set", SEC_PLAYER, false, &HandleSetCommand, "" },
-            // Default Command
-            { "Default", SEC_PLAYER, false, &HandleDefaultCommand, "" },
-            // Disable Command
-            { "Disable", SEC_PLAYER, false, &HandleDisableCommand, "" },
-            //Enable Command
-            { "Enable", SEC_PLAYER, false, &HandleEnableCommand, "" }
+            { "view",    HandleViewCommand,    SEC_PLAYER, Console::No },
+            { "set",     HandleSetCommand,     SEC_PLAYER, Console::No },
+            { "default", HandleDefaultCommand, SEC_PLAYER, Console::No },
+            { "disable", HandleDisableCommand, SEC_PLAYER, Console::No },
+            { "enable",  HandleEnableCommand,  SEC_PLAYER, Console::No },
         };
-        
-        static std::vector<ChatCommand> IndividualXPBaseTable =
+
+        static ChatCommandTable IndividualXPBaseTable =
         {
-            { "XP", SEC_PLAYER, false, nullptr, "", IndividualXPCommandTable }
+            { "xp", IndividualXPCommandTable },
         };
-        
+
         return IndividualXPBaseTable;
     }
     
@@ -180,22 +177,10 @@ class Individual_XP_conf : public WorldScript
 public:
     Individual_XP_conf() : WorldScript("Individual_XP_conf_conf") { }
 
-    void OnBeforeConfigLoad(bool reload) override
+    void OnAfterConfigLoad(bool /*reload*/) override
     {
-        if (!reload) {
-            std::string conf_path = _CONF_DIR;
-            std::string cfg_file = conf_path + "/Individual-XP.conf";
-
-#ifdef WIN32
-            cfg_file = "Individual-XP.conf";
-#endif
-
-            std::string cfg_def_file = cfg_file + ".dist";
-            sConfigMgr->LoadMore(cfg_def_file.c_str());
-            sConfigMgr->LoadMore(cfg_file.c_str());
-            MaxRate = sConfigMgr->GetIntDefault("MaxXPRate", 10);
-            DefaultRate = sConfigMgr->GetIntDefault("DefaultXPRate", 1);
-        }
+        MaxRate = sConfigMgr->GetOption<uint32>("MaxXPRate", 10);
+        DefaultRate = sConfigMgr->GetOption<uint32>("DefaultXPRate", 1);
     }
 };
 
