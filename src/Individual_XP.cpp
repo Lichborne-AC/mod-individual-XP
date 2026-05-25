@@ -97,11 +97,11 @@ public:
         
         if (me->HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_NO_XP_GAIN))
         {
-            handler->PSendSysMessage("Your XP is currently disabled. Do .xp enable to re-enable it.");
+            Notify(handler, "Your XP is currently disabled. Do .xp enable to re-enable it.");
         }
         else
         {
-            handler->PSendSysMessage("Your current XP rate is {}.", me->CustomData.GetDefault<PlayerXpRate>("Individual_XP")->XPRate);
+            Notify(handler, Acore::StringFormat("Your current XP rate is {}.", me->CustomData.GetDefault<PlayerXpRate>("Individual_XP")->XPRate));
         }
         return true;
     }
@@ -111,7 +111,7 @@ public:
     {
         if (!*args)
         {
-            handler->PSendSysMessage("Usage: .xp set <rate>  (max {})", MaxRate);
+            Notify(handler, Acore::StringFormat("Usage: .xp set <rate>  (max {})", MaxRate));
             return true;
         }
 
@@ -122,12 +122,12 @@ public:
         uint32 rate = (uint32)atol(args);
         if (rate > MaxRate)
         {
-            handler->PSendSysMessage("XP rate {} exceeds the maximum of {}.", rate, MaxRate);
+            Notify(handler, Acore::StringFormat("XP rate {} exceeds the maximum of {}.", rate, MaxRate));
             return true;
         }
 
         me->CustomData.GetDefault<PlayerXpRate>("Individual_XP")->XPRate = rate;
-        handler->PSendSysMessage("You have updated your XP rate to {}.", rate);
+        Notify(handler, Acore::StringFormat("You have updated your XP rate to {}.", rate));
         return true;
     }
 
@@ -143,7 +143,7 @@ public:
 
         // Turn Disabled On But Don't Change Value...
         me->SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_NO_XP_GAIN);
-        handler->PSendSysMessage("You have disabled your XP gain.");
+        Notify(handler, "You have disabled your XP gain.");
         return true;
     }
 
@@ -158,7 +158,7 @@ public:
             return false;
 
         me->RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_NO_XP_GAIN);
-        handler->PSendSysMessage("You have enabled your XP gain.");
+        Notify(handler, "You have enabled your XP gain.");
         return true;
     }
 
@@ -173,8 +173,19 @@ public:
             return false;
 
         me->CustomData.GetDefault<PlayerXpRate>("Individual_XP")->XPRate = DefaultRate;
-        handler->PSendSysMessage("You have restored your XP rate to the default value of {}.", DefaultRate);
+        Notify(handler, Acore::StringFormat("You have restored your XP rate to the default value of {}.", DefaultRate));
         return true;
+    }
+
+private:
+    // Send the same text to both the chat log (PSendSysMessage) and the
+    // area-trigger flash so the player sees it whether or not the System
+    // channel is visible in their chat tab.
+    static void Notify(ChatHandler* handler, std::string_view msg)
+    {
+        handler->SendSysMessage(msg);
+        if (Player* p = handler->GetSession() ? handler->GetSession()->GetPlayer() : nullptr)
+            p->GetSession()->SendAreaTriggerMessage(msg);
     }
 };
 
