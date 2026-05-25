@@ -1,6 +1,7 @@
 # mod-individual-XP
 
 #This Module is for Azerothcore -
+#Updated/Fixed for current builds
 
 # How to install
 
